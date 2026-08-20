@@ -6,6 +6,9 @@ const ACCOUNTS = [
   { gmail: 'azharotb@gmail.com', password: '12345', role: 'Lead judge' },
   { gmail: 'azharotb1@gmail.com', password: '12344', role: 'Judge one' },
   { gmail: 'azharotb2@gmail.com', password: '12345', role: 'Judge two' },
+  { gmail: 'kuttipencil1@gmail.com', password: '12345', role: 'Judge three' },
+  { gmail: 'kuttipencil2@gmail.com', password: '12345', role: 'Judge four' },
+  { gmail: 'kuttipencil3@gmail.com', password: '12345', role: 'Judge five' },
 ];
 
 const store = {
