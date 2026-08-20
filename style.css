@@ -161,6 +161,7 @@ button { cursor: pointer; }
   border: 2px solid var(--line); border-radius: 17px; text-align: left;
   transition: transform .18s ease, border-color .18s ease, background .18s ease;
 }
+.programme-option:not(:last-child) { margin-bottom: 2rem; }
 .programme-option:hover { transform: translateX(4px); border-color: var(--teal); background: #fff; }
 .programme-option.locked { border-color: var(--yellow-deep); background: #fff8da; }
 .programme-name-row { display: flex; align-items: center; gap: .75rem; min-width: 0; }
