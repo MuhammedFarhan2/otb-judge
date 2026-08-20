@@ -154,7 +154,7 @@ button { cursor: pointer; }
 .welcome-head .subtitle { max-width: 560px; }
 .judge-badge { display: none; padding: .45rem .6rem; border-radius: 10px; color: var(--navy); background: #d9f2f4; font: 500 .66rem var(--app-font-mono); }
 .alert-strip { display: flex; align-items: flex-start; gap: .65rem; margin-bottom: 1rem; padding: .8rem .9rem; color: #7b5821; background: #fff1c7; border-left: 4px solid var(--yellow-deep); border-radius: 9px; font-size: .74rem; line-height: 1.45; }
-.programme-list { display: grid; gap: 1.5rem; margin-top: 1.5rem; }
+.programme-list { display: grid; gap: 2rem; margin-top: 1.5rem; }
 .programme-option {
   width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
   padding: 1rem; color: var(--navy); background: rgba(255,255,255,.68);
