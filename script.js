@@ -74,8 +74,13 @@ let present = store.get('present', {});
 function getProgrammes() {
   return Array.isArray(programmes) ? programmes : [];
 }
-function lockedProgramme() {
-  return getProgrammes().find(function (p) { return p.locked; }) || null;
+function lockedProgrammes() {
+  return getProgrammes().filter(function (p) { return p.locked; });
+}
+function programmeByName(name) {
+  if (!name) return null;
+  const decoded = decodeURIComponent(name);
+  return getProgrammes().find(function (p) { return p.name === decoded; }) || null;
 }
 function lockProgramme(id) {
   programmes = getProgrammes().map(function (p) {
@@ -184,26 +189,29 @@ function viewLogin() {
 
 function viewWelcome() {
   if (!email) { nav('/login', true); return; }
-  const locked = lockedProgramme();
+  const lockedList = lockedProgrammes();
   let inner;
-  if (locked) {
+  if (lockedList.length > 0) {
+    const items = lockedList.map(function (p) {
+      const done = isFinished(p) || allLettersSaved(p);
+      return '<button class="programme-option' + (done ? '' : ' locked') + '" type="button" data-prog="' + encodeURIComponent(p.name) + '" data-testid="button-open-programme">' +
+        '<span class="programme-name-row">' +
+        '<span class="programme-icon">' + icon('award', 18, 2) + '</span>' +
+        '<span class="programme-name-text">' + esc(p.name) + '</span>' +
+        '</span>' + icon('arrowRight', 18, 2) +
+        '</button>';
+    }).join('');
     inner =
-      '<div class="alert-strip">' + icon('lock', 16, 2) + '<span><strong>' + esc(locked.name) + '</strong> is on your desk. Open it when the room is ready.</span></div>' +
-      '<div class="eyebrow">Active programme</div>' +
-      '<div class="programme-list">' +
-      '<button class="programme-option locked" type="button" data-testid="button-open-locked-programme" id="open-programme">' +
-      '<span class="programme-name-row">' +
-      '<span class="programme-icon">' + icon('award', 18, 2) + '</span>' +
-      '<span class="programme-name-text">' + esc(locked.name) + '</span>' +
-      '</span>' + icon('arrowRight', 18, 2) +
-      '</button></div>';
+      '<div class="alert-strip">' + icon('lock', 16, 2) + '<span><strong>' + lockedList.length + ' programme' + (lockedList.length > 1 ? 's' : '') + ' on your desk.</span></div>' +
+      '<div class="eyebrow">Active programmes</div>' +
+      '<div class="programme-list">' + items + '</div>';
   } else {
     inner =
       '<div class="eyebrow">Your programme list</div>' +
       '<div class="empty-box" data-testid="status-no-programme">' +
       icon('book', 34, 1.6) +
       '<strong style="color:var(--navy);">No programme on your desk yet.</strong>' +
-      '<p style="margin:.5rem 0 0;font-size:.78rem;">Programmes appear here once the admin panel locks one onto the desk.</p>' +
+      '<p style="margin:.5rem 0 0;font-size:.78rem;">Programmes appear here once the admin panel locks them onto the desk.</p>' +
       '</div>';
   }
 
@@ -213,7 +221,7 @@ function viewWelcome() {
     '<div>' +
     '<div class="eyebrow">Good to see you, judge</div>' +
     '<h1 class="title">Choose your<br><span style="color:var(--teal)">programme.</span></h1>' +
-    '<p class="subtitle" style="margin-top:1.1rem">One programme stays on your desk at a time. Take a breath, then trust what you noticed.</p>' +
+    '<p class="subtitle" style="margin-top:1.1rem">Open any programme on your desk, score its letters, and move on to the next.</p>' +
     '</div>' +
     '<span class="judge-badge" data-testid="text-welcome-email">' + esc(email) + '</span>' +
     '</div>' +
@@ -221,8 +229,11 @@ function viewWelcome() {
     '<div class="welcome-surface-body">' + inner + '</div>' +
     '</div></div>';
 
-  const openBtn = document.getElementById('open-programme');
-  if (openBtn) openBtn.addEventListener('click', function () { nav('/programme'); });
+  stage.querySelectorAll('.programme-option').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      nav('/programme/' + btn.getAttribute('data-prog'));
+    });
+  });
 }
 
 function renderScoring(prog, letterIdx) {
@@ -341,7 +352,7 @@ async function handleSubmit(prog, letterIdx, inputs, noteEl) {
     alert('Could not sync mark to the cloud: ' + (err && err.message ? err.message : String(err)) + '\n\nThe mark is saved on this device only.');
   }
 
-  if (letterIdx === LETTERS.length - 1) { nav('/final'); return; }
+  if (letterIdx === LETTERS.length - 1) { nav('/final/' + encodeURIComponent(prog.name)); return; }
   renderScoring(prog, letterIdx + 1);
 }
 
@@ -420,7 +431,7 @@ function viewFinalAssessment(prog) {
     if (finBtn) finBtn.addEventListener('click', function () {
       showFinalConfirm(function () {
         markFinished(prog);
-        nav(present[prog.name] ? '/rejected' : '/completed', true);
+        nav((present[prog.name] ? '/rejected' : '/completed') + '/' + encodeURIComponent(prog.name), true);
       });
     });
     const editBtn = document.getElementById('review-judgement');
@@ -475,10 +486,9 @@ function viewFinalAssessment(prog) {
   render(false);
 }
 
-function viewProgramme() {
+function viewProgramme(prog) {
   if (!email) { nav('/login', true); return; }
-  const locked = lockedProgramme();
-  if (!locked) {
+  if (!prog) {
     stage.innerHTML =
       '<div class="surface surface-pad status-card fade-in">' +
       '<div class="status-icon" style="background:var(--yellow);box-shadow:0 0 0 10px rgba(245,166,35,.15);color:var(--navy);">' + icon('book', 34, 1.6) + '</div>' +
@@ -488,18 +498,16 @@ function viewProgramme() {
       '</div>';
     return;
   }
-  if (isFinished(locked)) {
-    nav(present[locked.name] ? '/rejected' : '/completed', true);
+  if (isFinished(prog)) {
+    nav((present[prog.name] ? '/rejected' : '/completed') + '/' + encodeURIComponent(prog.name), true);
     return;
   }
-  if (present[locked.name]) { nav('/rejected', true); return; }
-  if (allLettersSaved(locked)) { nav('/final', true); return; }
-  renderScoring(locked, initialLetter(locked));
+  if (present[prog.name]) { nav('/rejected/' + encodeURIComponent(prog.name), true); return; }
+  if (allLettersSaved(prog)) { nav('/final/' + encodeURIComponent(prog.name), true); return; }
+  renderScoring(prog, initialLetter(prog));
 }
 
-function viewStatus(rejected) {
-  const locked = lockedProgramme();
-  const progName = locked ? locked.name : null;
+function viewStatus(rejected, progName) {
   const completed = !rejected;
   const body = completed
     ? 'Thank you for giving this programme your full attention. Your judgement is safely saved on this device.'
@@ -569,6 +577,9 @@ let homeTimer = null;
 function route() {
   const raw = window.location.hash;
   const path = raw.replace(/^#\/?/, '');
+  const parts = path.split('/');
+  const view = parts[0];
+  const param = parts.length > 1 ? parts.slice(1).join('/') : '';
 
   if (path === '') {
     if (homeTimer) return;
@@ -584,7 +595,7 @@ function route() {
 
   if (homeTimer) { clearTimeout(homeTimer); homeTimer = null; }
 
-  switch (path) {
+  switch (view) {
     case 'login':
       document.title = 'Sign in · AL-AZHAR OTB';
       viewLogin();
@@ -594,26 +605,26 @@ function route() {
       viewWelcome();
       break;
     case 'programme': {
-      const locked = lockedProgramme();
-      document.title = (locked ? locked.name : 'No programme') + ' · AL-AZHAR OTB';
-      viewProgramme();
+      const prog = programmeByName(param);
+      document.title = (prog ? prog.name : 'No programme') + ' · AL-AZHAR OTB';
+      viewProgramme(prog);
       break;
     }
     case 'final': {
-      const locked = lockedProgramme();
+      const prog = programmeByName(param);
       document.title = 'Final Assessment · AL-AZHAR OTB';
-      if (!locked) { viewStatus(false); break; }
-      if (isFinished(locked)) { nav('/completed', true); break; }
-      viewFinalAssessment(locked);
+      if (!prog) { viewStatus(false); break; }
+      if (isFinished(prog)) { nav('/completed/' + encodeURIComponent(prog.name), true); break; }
+      viewFinalAssessment(prog);
       break;
     }
     case 'completed':
       document.title = 'Judgement completed · AL-AZHAR OTB';
-      viewStatus(false);
+      viewStatus(false, param ? decodeURIComponent(param) : null);
       break;
     case 'rejected':
       document.title = 'Judgement rejected · AL-AZHAR OTB';
-      viewStatus(true);
+      viewStatus(true, param ? decodeURIComponent(param) : null);
       break;
     default:
       document.title = 'AL-AZHAR OTB · Judging desk';
